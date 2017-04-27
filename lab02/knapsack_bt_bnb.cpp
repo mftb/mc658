@@ -13,16 +13,17 @@
 ///
 // Bactracking function: 
 ///
-bool bt_search(int current_class, int current_element, int num_of_classes, vector<int> classes[], vector<int> &p, vector<int> &w, vector<int> &c, int n, int d, int B,  vector<int> &sol, int &best_P, vector<int> current_sol, int current_W, int current_P, int t, clock_t t_start){
+bool bt_search(int current_class, int current_element, int num_of_classes, bt_class_desc classes[], vector<int> &p, vector<int> &w, vector<int> &c, int n, int d, int B,  vector<int> &sol, int &best_P, vector<int> current_sol, int current_W, int current_P, int t, clock_t t_start){
     clock_t now, delta_t;
     now = clock();
     delta_t = now - t_start;
+    /*
     //DEBUG
     cout << "current_class: " << current_class << " current_element: " << current_element << " num_of_classes: " << num_of_classes << endl;
     cout << "best_P: " << best_P << " current_P: " << current_P << endl;
     cout << "current_W: " << current_W << endl;
-    cout << "classes[current_class][current_element]: " << classes[current_class][current_element] << endl;
-    cout << "classes[current_class].size(): " << classes[current_class].size() << endl;
+    cout << "classes[current_class].elements.[current_element]: " << classes[current_class].elements[current_element] << endl;
+    cout << "classes[current_class].elements.size(): " << classes[current_class].elements.size() << endl;
     cout << "partial solution: " << endl;
     for(int i=0; i<n; i++){
         cout << current_sol[i] << " ";
@@ -33,6 +34,7 @@ bool bt_search(int current_class, int current_element, int num_of_classes, vecto
         cout << sol[i] << " ";
     }
     cout << endl;
+    */    
     //Time limit test
     if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t){
         return false;
@@ -40,11 +42,11 @@ bool bt_search(int current_class, int current_element, int num_of_classes, vecto
     else{
         //TODO: Check issues with this bound
         //Tests upper bound (bandwidth limit)
-        if(current_W + w[classes[current_class][current_element]] > B){
+        if(current_W + w[classes[current_class].elements[current_element]] > B){
             //Current element does not fit, set it as zero and call for next element
-            current_sol[classes[current_class][current_element]] = 0;
+            current_sol[classes[current_class].elements[current_element]] = 0;
             //Checks if is last element of last class
-            if((current_class == num_of_classes - 1) && (current_element == classes[current_class].size() - 1)){
+            if((current_class == num_of_classes - 1) && (current_element == classes[current_class].elements.size() - 1)){
                 if(current_P > best_P){
                     best_P = current_P;
                     for(int i=0; i<n; i++)
@@ -54,7 +56,7 @@ bool bt_search(int current_class, int current_element, int num_of_classes, vecto
             //There are elements left in classes
             else{
                 //Test whether there are remaining elements in current class
-                if(current_element + 1 < classes[current_class].size()){
+                if(current_element + 1 < classes[current_class].elements.size()){
                     now = clock();
                     delta_t = now - t_start;
                     if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
@@ -69,7 +71,7 @@ bool bt_search(int current_class, int current_element, int num_of_classes, vecto
                     delta_t = now - t_start;
                     if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
                     //TODO: Check issues with W
-                    bt_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W+d, current_P, t, t_start);
+                    bt_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
                     now = clock();
                     delta_t = now - t_start;
                     if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
@@ -84,89 +86,106 @@ bool bt_search(int current_class, int current_element, int num_of_classes, vecto
         }
         else{
             //Current element fits, include it in current solution
-                current_sol[classes[current_class][current_element]] = 1;
-                current_P += p[classes[current_class][current_element]];
-                current_W += w[classes[current_class][current_element]];
+            bool prev_class_has_elements = false;
+            if(!classes[current_class].has_elements_in_solution){
+                for(int i=0; i<current_class; i++){
+                    if(classes[i].has_elements_in_solution){
+                        prev_class_has_elements = true;
+                        i = current_class;
+                    }
+                }
+                if(current_element == 0) classes[current_class].has_elements_in_solution = true;
+                if(prev_class_has_elements){
+                    current_W += d;
+                }
+            }
+            current_sol[classes[current_class].elements[current_element]] = 1;
+            current_P += p[classes[current_class].elements[current_element]];
+            current_W += w[classes[current_class].elements[current_element]];
+            //Checks if current solution is better than the best solution
+            if(current_P > best_P){
+                best_P = current_P;
+                for(int i=0; i<n; i++)
+                   sol[i] = current_sol[i];
+            }
+            //Checks if is last element of last class
+            if((current_class == num_of_classes - 1) && (current_element == classes[current_class].elements.size() - 1)){
                 //Checks if current solution is better than the best solution
                 if(current_P > best_P){
                     best_P = current_P;
                     for(int i=0; i<n; i++)
                        sol[i] = current_sol[i];
                 }
-                //Checks if is last element of last class
-                if((current_class == num_of_classes - 1) && (current_element == classes[current_class].size() - 1)){
-                    //Checks if current solution is better than the best solution
-                    if(current_P > best_P){
-                        best_P = current_P;
-                        for(int i=0; i<n; i++)
-                           sol[i] = current_sol[i];
-                    }
+            }
+            //There are elements left in classes
+            else{
+                //Test whether there are remaining elements in current class
+                if(current_element + 1 < classes[current_class].elements.size()){
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
+                    bt_search(current_class, current_element + 1, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
                 }
-                //There are elements left in classes
+                //Last element in class, pick first element of next class and add d to current_W
                 else{
-                    //Test whether there are remaining elements in current class
-                    if(current_element + 1 < classes[current_class].size()){
-                        now = clock();
-                        delta_t = now - t_start;
-                        if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                        bt_search(current_class, current_element + 1, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
-                        now = clock();
-                        delta_t = now - t_start;
-                        if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                    }
-                    //Last element in class, pick first element of next class and add d to current_W
-                    else{
-                        now = clock();
-                        delta_t = now - t_start;
-                        if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                        //TODO: Check issues with W
-                        bt_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W+d, current_P, t, t_start);
-                        now = clock();
-                        delta_t = now - t_start;
-                        if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                    }
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
+                    //TODO: Check issues with W
+                    bt_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
                 }
-                //Current element might not improve best profit, lets not include it in the current solution and keep running
-                current_sol[classes[current_class][current_element]] = 0;
-                current_P -= p[classes[current_class][current_element]];
-                current_W -= w[classes[current_class][current_element]];
+            }
+            //Current element might not improve best profit, lets not include it in the current solution and keep running
+            if(current_element == 0) classes[current_class].has_elements_in_solution = false;
+            if(prev_class_has_elements){
+                current_W -= d;
+            }
+            current_sol[classes[current_class].elements[current_element]] = 0;
+            current_P -= p[classes[current_class].elements[current_element]];
+            current_W -= w[classes[current_class].elements[current_element]];
+            //Checks if current solution is better than the best solution
+            if(current_P > best_P){
+                best_P = current_P;
+                for(int i=0; i<n; i++)
+                    sol[i] = current_sol[i];
+            }
+            //Checks if is last element of last class
+            if((current_class == num_of_classes - 1) && (current_element == classes[current_class].elements.size() - 1)){
                 //Checks if current solution is better than the best solution
                 if(current_P > best_P){
                     best_P = current_P;
                     for(int i=0; i<n; i++)
                        sol[i] = current_sol[i];
                 }
-                //Checks if is last element of last class
-                if((current_class == num_of_classes - 1) && (current_element == classes[current_class].size() - 1)){
-                    //Checks if current solution is better than the best solution
-                    if(current_P > best_P){
-                        best_P = current_P;
-                        for(int i=0; i<n; i++)
-                           sol[i] = current_sol[i];
-                    }
+            }
+            //There are elements left in classes
+            else{
+                //Test whether there are remaining elements in current class
+                if(current_element + 1 < classes[current_class].elements.size()){
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
+                    bt_search(current_class, current_element + 1, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
                 }
-                //There are elements left in classes
+                //Last element in class, pick first element of next class and add d to current_W
                 else{
-                    //Test whether there are remaining elements in current class
-                    if(current_element + 1 < classes[current_class].size()){
-                        now = clock();
-                        delta_t = now - t_start;
-                        if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                        bt_search(current_class, current_element + 1, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
-                        now = clock();
-                        delta_t = now - t_start;
-                       if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                    }
-                    //Last element in class, pick first element of next class and add d to current_W
-                    else{
-                        now = clock();
-                        delta_t = now - t_start;
-                        if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                        bt_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
-                        now = clock();
-                        delta_t = now - t_start;
-                       if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                    }
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
+                    bt_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
+                    now = clock();
+                    delta_t = now - t_start;
+                    if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
+                }
             }
         }
         return true;
@@ -185,18 +204,13 @@ bool bt(int n, int d, int B, vector<int> &p, vector<int> &w, vector<int> &c, vec
     }
 
     //Creates the array of classes
-    vector<int> classes[biggest_class];
+    bt_class_desc classes[biggest_class];
 
     //Initializes array of classes
+    for(int i=0; i<biggest_class; i++)
+        classes[c[i] - 1].has_elements_in_solution = false;
     for(int i=0; i<n; i++){
-        classes[c[i] - 1].push_back(i);
-    }
-    //DEBUG
-    for(int i=0; i<biggest_class; i++){
-        cout << "Class: " << i << endl;
-        for(int j=0; j<classes[i].size(); j++){
-            cout << p[classes[i][j]] << " " << w[classes[i][j]] << " " << c[classes[i][j]] << " position: " << classes[i][j] << endl;
-        }
+        classes[c[i] - 1].elements.push_back(i);
     }
 
     //Some setup before search
@@ -280,7 +294,7 @@ bool bnb_search(int current_class, int current_element, int num_of_classes, bnb_
                     now = clock();
                     delta_t = now - t_start;
                     if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                    bnb_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W+d, current_P, t, t_start);
+                    bnb_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
                     now = clock();
                     delta_t = now - t_start;
                     if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
@@ -324,7 +338,7 @@ bool bnb_search(int current_class, int current_element, int num_of_classes, bnb_
                         now = clock();
                         delta_t = now - t_start;
                         if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                        bnb_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W+d, current_P, t, t_start);
+                        bnb_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
                         now = clock();
                         delta_t = now - t_start;
                         if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
@@ -338,6 +352,19 @@ bool bnb_search(int current_class, int current_element, int num_of_classes, bnb_
             }
             else{
                 //Current element might improve best profit, include it in the best solution and in the current solution
+                bool prev_class_has_elements = false;
+                if(!classes[current_class].has_elements_in_solution){
+                   for(int i=0; i<current_class; i++){
+                       if(classes[i].has_elements_in_solution){
+                           prev_class_has_elements = true;
+                           i = current_class;
+                        }
+                    }
+                }
+                if(current_element == 0) classes[current_class].has_elements_in_solution = true;
+                if(prev_class_has_elements){
+                    current_W += d;
+                }
                 current_sol[classes[current_class].elements[current_element].pos] = 1;
                 current_P += p[classes[current_class].elements[current_element].pos];
                 current_W += w[classes[current_class].elements[current_element].pos];
@@ -366,7 +393,7 @@ bool bnb_search(int current_class, int current_element, int num_of_classes, bnb_
                         now = clock();
                         delta_t = now - t_start;
                         if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
-                        bnb_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W+d, current_P, t, t_start);
+                        bnb_search(current_class + 1, 0, num_of_classes, classes, p, w, c, n, d, B, sol, best_P, current_sol, current_W, current_P, t, t_start);
                         now = clock();
                         delta_t = now - t_start;
                         if((((float)delta_t)/CLOCKS_PER_SEC) > (float)t) return false;
@@ -378,6 +405,10 @@ bool bnb_search(int current_class, int current_element, int num_of_classes, bnb_
                     }
                 }
                 //Current element might not improve best profit, lets not include it in the best solution and keep running
+                if(current_element == 0) classes[current_class].has_elements_in_solution = false;
+                if(prev_class_has_elements){
+                    current_W -= d;
+                }
                 current_sol[classes[current_class].elements[current_element].pos] = 0;
                 current_P -= p[classes[current_class].elements[current_element].pos];
                 current_W -= w[classes[current_class].elements[current_element].pos];
@@ -457,6 +488,7 @@ bool bnb(int n, int d, int B, vector<int> &p, vector<int> &w, vector<int> &c, ve
     //Compute the average relative profit for each class and order each class by the relative profit of its elements, in descending order
     float avg;
     for(int i=0; i<biggest_class; i++){
+        
         //Computing the average relative profit for current class
         avg = 0.0;
         for(int j=0; j<classes[i].elements.size(); j++){
@@ -464,6 +496,7 @@ bool bnb(int n, int d, int B, vector<int> &p, vector<int> &w, vector<int> &c, ve
         }
         avg = avg / (float)classes[i].elements.size();
         classes[i].avg_rel_profit = avg;
+        classes[i].has_elements_in_solution = false;
         //Sorting classes by its most profitable elements
         std::sort(classes[i].elements.begin(), classes[i].elements.end(), compare_rel_profit);
     }
