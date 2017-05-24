@@ -11,6 +11,9 @@
 // Nome2: Andre Nogueira Brandao
 // RA2: 116130
 
+// Gurobi Optimizer version 6.0.2 build v6.0.2rc0 (linux64)
+
+
 ///
 // PL function
 ///
